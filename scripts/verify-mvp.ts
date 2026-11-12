@@ -190,6 +190,11 @@ async function runAllTests() {
   const mcpServer = createObligoMcpServer();
   assertTest("Call MCP server setup", "Server instantiated with registered tools", Boolean(mcpServer));
 
+  // 17. Superfluid Crypto Subscription Discovery
+  const { SuperfluidStreamConnector } = await import("../src/modules/subscriptions/crypto-stream.connector");
+  const streams = await SuperfluidStreamConnector.discoverStreams();
+  assertTest("Crypto subscription discovery (Superfluid)", "Streams discovered & normalized", streams.length > 0 && Boolean(streams[0].monthlyEquivalentFormatted));
+
   // Summary
   console.log("\n=================================================");
   const total = results.length;

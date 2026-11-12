@@ -58,7 +58,7 @@ export class NearAuthorisationClient {
     if (accountId && privateKey && privateKey.startsWith("ed25519:")) {
       try {
         const keyStore = new keyStores.InMemoryKeyStore();
-        const keyPair = KeyPair.fromString(privateKey);
+        const keyPair = KeyPair.fromString(privateKey as any);
         await keyStore.setKey(this.networkId, accountId, keyPair);
 
         const nearConnection = await connect({

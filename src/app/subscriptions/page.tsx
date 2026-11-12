@@ -31,6 +31,8 @@ interface SubscriptionItem {
 
 export default function SubscriptionsPage() {
   const [subscriptions, setSubscriptions] = useState<SubscriptionItem[]>([]);
+  const [cryptoStreams, setCryptoStreams] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<"standard" | "crypto">("standard");
   const [loading, setLoading] = useState(true);
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -54,10 +56,18 @@ export default function SubscriptionsPage() {
 
   async function loadSubscriptions() {
     try {
-      const res = await fetch("/api/subscriptions");
-      const json = await res.json();
-      if (json.success) {
-        setSubscriptions(json.subscriptions);
+      const [subRes, streamRes] = await Promise.all([
+        fetch("/api/subscriptions"),
+        fetch("/api/subscriptions/crypto-streams"),
+      ]);
+      const subJson = await subRes.json();
+      const streamJson = await streamRes.json();
+
+      if (subJson.success) {
+        setSubscriptions(subJson.subscriptions);
+      }
+      if (streamJson.success) {
+        setCryptoStreams(streamJson.streams);
       }
     } catch (err) {
       console.error("Error loading subscriptions:", err);
@@ -242,135 +252,214 @@ export default function SubscriptionsPage() {
         </div>
       </div>
 
-      {/* Filter Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl bg-slate-950 border border-slate-800">
-        <div className="flex items-center space-x-2 text-xs text-slate-400">
-          <Filter className="w-4 h-4 text-slate-400" />
-          <span>Filter:</span>
-        </div>
+      {/* Navigation Tabs */}
+      <div className="flex items-center space-x-2 border-b border-slate-800 pb-2">
+        <button
+          onClick={() => setActiveTab("standard")}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+            activeTab === "standard"
+              ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-sm"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+          }`}
+        >
+          Active Subscriptions ({subscriptions.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("crypto")}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+            activeTab === "crypto"
+              ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-sm"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
+          }`}
+        >
+          <span>Web3 Streams • Superfluid</span>
+          <span className="px-1.5 py-0.2 rounded-full bg-cyan-950 text-cyan-300 text-[10px] font-mono border border-cyan-500/30">
+            {cryptoStreams.length}
+          </span>
+        </button>
+      </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <select
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-            className="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-emerald-500"
-          >
-            <option value="all">All Categories</option>
-            {categories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
+      {activeTab === "crypto" ? (
+        /* Superfluid Crypto Streams View */
+        <div className="rounded-xl bg-slate-950 border border-slate-800 p-6 space-y-4 shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+            <div>
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <span>Superfluid Constant Flow Agreements (CFA)</span>
+                <span className="text-xs px-2 py-0.5 rounded font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                  Real-Time Money Streams
+                </span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                On-chain money streaming subscriptions that flow second-by-second without recurring manual transactions.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {cryptoStreams.map((st) => (
+              <div
+                key={st.id}
+                className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3 hover:border-slate-700 transition"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="text-sm font-semibold text-white">{st.receiverName}</h4>
+                    <span className="text-[11px] font-mono text-slate-400">{st.network}</span>
+                  </div>
+                  <span className="text-xs font-bold font-mono text-cyan-400 bg-cyan-950/40 border border-cyan-500/30 px-2 py-0.5 rounded">
+                    {st.monthlyEquivalentFormatted}
+                  </span>
+                </div>
+
+                <div className="text-[11px] font-mono text-slate-400 bg-slate-950 p-2.5 rounded-lg border border-slate-800 space-y-1">
+                  <div className="flex justify-between">
+                    <span>Flow Rate:</span>
+                    <span className="text-slate-200">{st.flowRatePerSecond} wei/sec</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Receiver:</span>
+                    <span className="text-slate-300">{st.receiver}</span>
+                  </div>
+                </div>
+              </div>
             ))}
-          </select>
-
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-emerald-500"
-          >
-            <option value="all">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="paused">Paused</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
+          </div>
         </div>
-      </div>
+      ) : (
+        /* Standard Subscriptions View */
+        <>
+          {/* Filter Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl bg-slate-950 border border-slate-800">
+            <div className="flex items-center space-x-2 text-xs text-slate-400">
+              <Filter className="w-4 h-4 text-slate-400" />
+              <span>Filter:</span>
+            </div>
 
-      {/* Table / List */}
-      <div className="rounded-xl bg-slate-950 border border-slate-800 overflow-hidden shadow-xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-slate-300">
-            <thead className="bg-slate-900/80 text-xs uppercase font-medium text-slate-400 border-b border-slate-800">
-              <tr>
-                <th className="px-6 py-4">Service & Provider</th>
-                <th className="px-6 py-4">Category</th>
-                <th className="px-6 py-4">Billing Amount</th>
-                <th className="px-6 py-4">Monthly Equivalent</th>
-                <th className="px-6 py-4">Next Renewal</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/80">
-              {filtered.map((sub) => {
-                const monthlyEq = calculateMonthlyEquivalent(sub.amount, sub.billingCycle);
-                return (
-                  <tr key={sub.id} className="hover:bg-slate-900/40 transition">
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-white">{sub.name}</div>
-                      <div className="text-xs text-slate-400">{sub.provider}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-xs px-2.5 py-1 rounded-md bg-slate-900 border border-slate-700 text-slate-300">
-                        {sub.category}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 font-mono font-medium text-white">
-                      {formatCurrency(sub.amount, sub.currency)}
-                      <span className="text-xs text-slate-400 font-normal ml-1">
-                        /{sub.billingCycle}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 font-mono font-semibold text-emerald-400">
-                      {formatCurrency(monthlyEq)}
-                      <span className="text-[11px] text-slate-400 font-normal">/mo</span>
-                    </td>
-                    <td className="px-6 py-4 text-xs font-mono text-slate-300">
-                      <span className="flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-cyan-400" />
-                        {sub.nextBillingDate}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`text-xs px-2.5 py-0.5 rounded-full font-medium inline-flex items-center gap-1 ${
-                          sub.status === "active"
-                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                            : sub.status === "paused"
-                            ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                            : "bg-red-500/10 text-red-400 border border-red-500/20"
-                        }`}
-                      >
-                        {sub.status === "active" && <CheckCircle className="w-3 h-3" />}
-                        {sub.status === "paused" && <PauseCircle className="w-3 h-3" />}
-                        {sub.status === "cancelled" && <XCircle className="w-3 h-3" />}
-                        {sub.status.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right space-x-2">
-                      <button
-                        onClick={() => handleToggleStatus(sub)}
-                        title={sub.status === "active" ? "Pause Subscription" : "Activate Subscription"}
-                        className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 transition"
-                      >
-                        {sub.status === "active" ? (
-                          <PauseCircle className="w-3.5 h-3.5 text-amber-400" />
-                        ) : (
-                          <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-                        )}
-                      </button>
-                      <button
-                        onClick={() => handleOpenEdit(sub)}
-                        title="Edit Subscription"
-                        className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 transition"
-                      >
-                        <Edit2 className="w-3.5 h-3.5 text-cyan-400" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(sub.id)}
-                        title="Delete Subscription"
-                        className="p-1.5 rounded-lg bg-slate-900 hover:bg-red-950/40 border border-slate-700 hover:border-red-500/40 text-slate-300 hover:text-red-400 transition"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
+            <div className="flex flex-wrap items-center gap-3">
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-emerald-500"
+              >
+                <option value="all">All Categories</option>
+                {categories.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-emerald-500"
+              >
+                <option value="all">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="paused">Paused</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Table / List */}
+          <div className="rounded-xl bg-slate-950 border border-slate-800 overflow-hidden shadow-xl">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-slate-300">
+                <thead className="bg-slate-900/80 text-xs uppercase font-medium text-slate-400 border-b border-slate-800">
+                  <tr>
+                    <th className="px-6 py-4">Service & Provider</th>
+                    <th className="px-6 py-4">Category</th>
+                    <th className="px-6 py-4">Billing Amount</th>
+                    <th className="px-6 py-4">Monthly Equivalent</th>
+                    <th className="px-6 py-4">Next Renewal</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4 text-right">Actions</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                </thead>
+                <tbody className="divide-y divide-slate-800/80">
+                  {filtered.map((sub) => {
+                    const monthlyEq = calculateMonthlyEquivalent(sub.amount, sub.billingCycle);
+                    return (
+                      <tr key={sub.id} className="hover:bg-slate-900/40 transition">
+                        <td className="px-6 py-4">
+                          <div className="font-semibold text-white">{sub.name}</div>
+                          <div className="text-xs text-slate-400">{sub.provider}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-xs px-2.5 py-1 rounded-md bg-slate-900 border border-slate-700 text-slate-300">
+                            {sub.category}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 font-mono font-medium text-white">
+                          {formatCurrency(sub.amount, sub.currency)}
+                          <span className="text-xs text-slate-400 font-normal ml-1">
+                            /{sub.billingCycle}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 font-mono font-semibold text-emerald-400">
+                          {formatCurrency(monthlyEq)}
+                          <span className="text-[11px] text-slate-400 font-normal">/mo</span>
+                        </td>
+                        <td className="px-6 py-4 text-xs font-mono text-slate-300">
+                          <span className="flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-cyan-400" />
+                            {sub.nextBillingDate}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`text-xs px-2.5 py-0.5 rounded-full font-medium inline-flex items-center gap-1 ${
+                              sub.status === "active"
+                                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                                : sub.status === "paused"
+                                ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                                : "bg-red-500/10 text-red-400 border border-red-500/20"
+                            }`}
+                          >
+                            {sub.status === "active" && <CheckCircle className="w-3 h-3" />}
+                            {sub.status === "paused" && <PauseCircle className="w-3 h-3" />}
+                            {sub.status === "cancelled" && <XCircle className="w-3 h-3" />}
+                            {sub.status.toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right space-x-2">
+                          <button
+                            onClick={() => handleToggleStatus(sub)}
+                            title={sub.status === "active" ? "Pause Subscription" : "Activate Subscription"}
+                            className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 transition"
+                          >
+                            {sub.status === "active" ? (
+                              <PauseCircle className="w-3.5 h-3.5 text-amber-400" />
+                            ) : (
+                              <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => handleOpenEdit(sub)}
+                            title="Edit Subscription"
+                            className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 transition"
+                          >
+                            <Edit2 className="w-3.5 h-3.5 text-cyan-400" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(sub.id)}
+                            title="Delete Subscription"
+                            className="p-1.5 rounded-lg bg-slate-900 hover:bg-red-950/40 border border-slate-700 hover:border-red-500/40 text-slate-300 hover:text-red-400 transition"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Modal for Add / Edit */}
       {isModalOpen && (

@@ -134,6 +134,16 @@ export function createObligoMcpServer() {
           description: "Generate AI & deterministic insights on recurring commitments and potential savings",
           inputSchema: { type: "object", properties: {} },
         },
+        {
+          name: "discover_crypto_streams",
+          description: "Discover recurring on-chain crypto streaming subscriptions (Superfluid CFA streams)",
+          inputSchema: {
+            type: "object",
+            properties: {
+              walletAddress: { type: "string", description: "Optional EVM / Superfluid wallet address" },
+            },
+          },
+        },
         // Privacy and Permissions
         {
           name: "get_private_preferences",
@@ -244,6 +254,11 @@ export function createObligoMcpServer() {
         case "get_subscription_insights": {
           const insights = SubscriptionInsightsEngine.generateInsights();
           return { content: [{ type: "text", text: JSON.stringify(insights, null, 2) }] };
+        }
+        case "discover_crypto_streams": {
+          const { SuperfluidStreamConnector } = await import("@/modules/subscriptions/crypto-stream.connector");
+          const streams = await SuperfluidStreamConnector.discoverStreams(args.walletAddress ? String(args.walletAddress) : undefined);
+          return { content: [{ type: "text", text: JSON.stringify(streams, null, 2) }] };
         }
         case "get_private_preferences": {
           const prefs = MemoryService.getPreferences();
