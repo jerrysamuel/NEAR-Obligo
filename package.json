@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "test:mvp": "tsx scripts/verify-mvp.ts",
+    "generate:near-keys": "tsx scripts/generate-near-keys.ts",
     "mcp": "tsx src/infrastructure/mcp/cli.ts"
   },
   "dependencies": {
