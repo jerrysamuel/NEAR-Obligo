@@ -1,6 +1,6 @@
 # Nearbligo
 
-Policy-controlled invoice payments for businesses and contractors, powered by NEAR.
+Policy-controlled invoice payments for businesses and contractors, powered by NEAR Mainnet.
 
 Nearbligo helps a payer define contractor obligations and payment boundaries, then automatically reviews and settles valid invoices. The same workflow works for logistics, construction, professional services, staffing, maintenance, procurement, and other invoice-based industries.
 
@@ -20,9 +20,22 @@ Nearbligo helps a payer define contractor obligations and payment boundaries, th
 - Payer portal: vendors, contracts, invoices, approvals, policies, pause/resume, and settlement history.
 - Contractor portal: onboarding, invoice submission, invoice status, payout profile, and receipts.
 - NEAR authorization: permission hashes and revocation records.
-- Agent API: scoped payment execution with idempotency keys.
-- Self-hosted autonomous worker: restricted NEAR key fallback for direct USDT invoice settlement when Agent API access is unavailable.
-- MCP: invoice, obligation, lifecycle-event, authorization, evaluation, and emergency-pause tools over stdio.
+- Self-hosted autonomous worker: a restricted NEAR FunctionCall key on `oblig.near` that can call only `ft_transfer` on the USDT contract.
+- MCP: invoice, obligation, lifecycle-event, authorization, evaluation, and emergency-pause tools over stdio or authenticated HTTP.
+- Webhooks: invoice lifecycle delivery and provider callback endpoints for event-driven integrations.
+
+## Mainnet deployment
+
+The permissions contract is deployed at `obligoo.near` on NEAR Mainnet. The payout account is separate:
+
+```text
+Permissions contract: obligoo.near
+Autonomous payout account: oblig.near
+USDT contract: usdt.tether-token.near
+Network: mainnet
+```
+
+`obligoo.near` stores authorization state. `oblig.near` holds USDT and NEAR for gas and signs payouts through its restricted worker key. Never use a FullAccess key as the autonomous worker key.
 
 ## Local setup
 
@@ -32,6 +45,23 @@ pnpm dev
 ```
 
 Configure Supabase and NEAR credentials in `.env.local`. Use a dedicated low-balance account for demonstrations. The Rust contract is in `contracts/obligo-permissions`.
+
+Required backend variables include:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=...
+SUPABASE_SERVICE_ROLE_KEY=...
+NEAR_NETWORK_ID=mainnet
+NEAR_NODE_URL=https://rpc.mainnet.near.org
+NEAR_ACCOUNT_ID=obligoo.near
+NEAR_PRIVATE_KEY=<permissions-owner-key>
+NEAR_CONTRACT_ID=obligoo.near
+NEAR_AUTONOMOUS_ACCOUNT_ID=oblig.near
+NEAR_AUTONOMOUS_PRIVATE_KEY=<restricted-worker-private-key>
+NEAR_USDT_CONTRACT=usdt.tether-token.near
+```
+
+Keep all private keys server-side. Do not expose them through `NEXT_PUBLIC_*` variables or commit `.env.local`.
 
 Optional server integrations:
 
@@ -45,7 +75,7 @@ NEAR_AGENT_WEBHOOK_SECRET=<provider-callback-secret>
 
 The remote MCP endpoint requires `Authorization: Bearer $MCP_API_TOKEN`. The delivery and reconciliation routes require `Authorization: Bearer $CRON_SECRET`.
 
-## Self-hosted autonomous worker fallback
+## Self-hosted autonomous worker
 
 Use a dedicated low-balance payer account such as `oblig.near`. Generate a worker key with:
 
@@ -68,17 +98,34 @@ NEAR_AUTONOMOUS_PRIVATE_KEY=<restricted-worker-private-key>
 NEAR_USDT_CONTRACT=usdt.tether-token.near
 ```
 
-The worker rejects full-access keys, validates the on-chain key restriction, checks the invoice policy, submits the USDT transfer, and records the confirmed NEAR transaction hash. Keep only a small demonstration balance in this account.
+The worker rejects FullAccess keys, validates the on-chain key restriction, checks the invoice policy, submits the USDT transfer, and records the confirmed NEAR transaction hash. Keep only a small demonstration balance in this account.
+
+The worker currently settles invoices in USDT only. NEAR is used for gas and token-storage registration. Before a contractor can receive USDT, their payout account must be registered with `usdt.tether-token.near` through `storage_deposit`; this can be paid by the contractor or by the platform setup account. The worker payout key itself remains limited to `ft_transfer`.
+
+The payment path prefers the self-hosted worker whenever its credentials are configured. The external Agent API is optional and is used only when no autonomous worker credentials are available.
 
 
-## Verification
+## Verification and testing
 
 ```bash
 pnpm exec tsc --noEmit
+pnpm build
+pnpm check:worker-key
+pnpm test:mainnet-contract
 pnpm test:mvp
 pnpm mcp
 ```
 
-The MCP server can provide invoice and policy context without the Agent API key. Settlement tools fail closed until live payment credentials are configured. Remote MCP requests use `/api/mcp` with `Authorization: Bearer $MCP_API_TOKEN`; stdio remains available for local clients.
+For a full browser test:
 
-Before a real-money deployment, remove all mock settlement fallbacks, build and test the contract, deploy it to the target NEAR network, and verify a small real payment end-to-end.
+1. Start the app with `pnpm dev`.
+2. Create a payer contractor invitation and an active contract.
+3. Have the contractor submit a real NEAR payout account.
+4. Approve the exact vendor record linked to that invitation.
+5. Register the payout account with the USDT contract.
+6. Ensure `oblig.near` has NEAR for gas and USDT for settlement.
+7. Submit a small invoice and verify `settled`, the transaction hash, and the recipient balance.
+
+The MCP server can provide invoice and policy context without the Agent API key. Remote MCP requests use `/api/mcp` with `Authorization: Bearer $MCP_API_TOKEN`; stdio remains available for local clients. Webhook delivery and reconciliation routes require `Authorization: Bearer $CRON_SECRET`.
+
+Do not use `scripts/seed.ts` for the production database: it creates demonstration vendors, contracts, and invoices. Use fresh payer and contractor records for a real demo.

@@ -6,7 +6,7 @@ import { recordInvoiceEvent } from "@/lib/invoice-events";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
   noStore();
   try {
     const admin = getServiceSupabase();
@@ -14,10 +14,13 @@ export async function GET() {
       return NextResponse.json({ invoices: [] });
     }
 
-    const { data: invoices, error } = await admin
+    const vendorId = new URL(req.url).searchParams.get("vendor_id");
+    let invoiceQuery = admin
       .from("invoices")
       .select("*, obligations(*), vendors(*)")
       .order("created_at", { ascending: false });
+    if (vendorId) invoiceQuery = invoiceQuery.eq("vendor_id", vendorId);
+    const { data: invoices, error } = await invoiceQuery;
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -58,6 +61,12 @@ export async function POST(req: Request) {
     }
 
     const obligation = obligations[0];
+    if (vendor_id && obligation.vendor_id !== vendor_id) {
+      return NextResponse.json(
+        { error: "This contract does not belong to the current contractor." },
+        { status: 403 }
+      );
+    }
     const qty = Math.max(1, parseInt(quantity || 1, 10));
     const rateCents = Number(obligation.rate_cents) || 20;
     const totalAmount = qty * rateCents;
@@ -74,7 +83,13 @@ export async function POST(req: Request) {
       vendor = vData;
     }
 
-    const vendorAddress = vendor?.wallet_address || "aurora.near";
+    const vendorAddress = String(vendor?.wallet_address || "").trim().toLowerCase();
+    if (!vendor || !vendorAddress || vendorAddress === "unassigned.near" || vendorAddress === "replace_me" || !vendor.wallet_verified || vendor.status !== "active") {
+      return NextResponse.json(
+        { error: "Contractor payout account is not approved yet. Ask the payer to approve a real NEAR account before submitting an invoice." },
+        { status: 409 }
+      );
+    }
     const invNumber =
       invoice_number ||
       `INV-${Date.now().toString().slice(-6)}`;

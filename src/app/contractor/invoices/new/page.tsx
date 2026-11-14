@@ -34,6 +34,7 @@ export default function NewInvoicePage() {
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
+  const [vendorId, setVendorId] = useState<string | null>(null);
 
   useEffect(() => {
     // Generate default invoice number
@@ -41,7 +42,9 @@ export default function NewInvoicePage() {
 
     const loadContracts = async () => {
       try {
-        const res = await fetch("/api/invoices");
+        const currentVendorId = window.sessionStorage.getItem("nearbligo_vendor_id");
+        setVendorId(currentVendorId);
+        const res = await fetch(currentVendorId ? `/api/invoices?vendor_id=${encodeURIComponent(currentVendorId)}` : "/api/invoices");
         const data = await res.json();
         if (Array.isArray(data.contracts) && data.contracts.length > 0) {
           setContracts(data.contracts);
@@ -79,7 +82,14 @@ export default function NewInvoicePage() {
   }
 
   const handleSubmit = async () => {
-    if (!selectedContract) return;
+    if (!selectedContract) {
+      setErrorMsg("No active contract is available for this contractor.");
+      return;
+    }
+    if (!vendorId) {
+      setErrorMsg("Contractor session is missing. Reopen the original invite link, submit your payout account, and wait for payer approval before creating an invoice.");
+      return;
+    }
     setSubmitting(true);
     setErrorMsg("");
 
@@ -91,6 +101,7 @@ export default function NewInvoicePage() {
           obligation_id: selectedContract.id,
           quantity,
           invoice_number: invoiceNumber,
+          vendor_id: vendorId,
         }),
       });
 
@@ -102,6 +113,7 @@ export default function NewInvoicePage() {
       setShowConfirmModal(false);
       router.push(`/contractor/invoices/${data.invoice.id}`);
     } catch (err: any) {
+      console.error("[contractor/invoices/new] Invoice submission failed:", err);
       setErrorMsg(err.message || "Submission failed");
       setSubmitting(false);
     }

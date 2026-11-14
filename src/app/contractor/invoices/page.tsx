@@ -34,7 +34,8 @@ export default function ContractorInvoicesPage() {
 
   const loadInvoices = async () => {
     try {
-      const res = await fetch("/api/vendor/invoices");
+      const vendorId = window.sessionStorage.getItem("nearbligo_vendor_id");
+      const res = await fetch(vendorId ? `/api/vendor/invoices?vendor_id=${encodeURIComponent(vendorId)}` : "/api/vendor/invoices");
       const data = await res.json();
       if (Array.isArray(data.invoices)) {
         setInvoices(data.invoices);

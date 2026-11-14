@@ -32,10 +32,12 @@ export async function GET(req: Request) {
     }
 
     // Fetch contracts (obligations)
-    const { data: obligations } = await admin
+    let obligationsQuery = admin
       .from("obligations")
       .select("id, name, rate_cents, unit, frequency, max_amount, status")
       .eq("status", "active");
+    if (vendorId) obligationsQuery = obligationsQuery.eq("vendor_id", vendorId);
+    const { data: obligations } = await obligationsQuery;
 
     // Fetch invoices
     const { data: invoices } = await admin

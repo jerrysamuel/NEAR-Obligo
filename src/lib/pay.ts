@@ -14,6 +14,23 @@ export interface ProcessInvoiceResult {
   txRef?: string;
 }
 
+function describePaymentError(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "string") {
+    const trimmed = error.trim();
+    return trimmed && trimmed !== "{}" ? trimmed : "Unknown NEAR execution error";
+  }
+  const candidate = error as any;
+  if (candidate?.message) return String(candidate.message);
+  if (candidate?.cause?.message) return String(candidate.cause.message);
+  try {
+    const serialized = JSON.stringify(error);
+    return serialized && serialized !== "{}" ? serialized : "Unknown NEAR execution error";
+  } catch {
+    return "Unknown NEAR execution error";
+  }
+}
+
 /**
  * The payment pipeline (Section 7.4 of Build Spec)
  *
@@ -232,9 +249,27 @@ export async function processInvoice(
   let txRef: string | undefined;
   let callSucceeded = false;
   let callSubmitted = false;
+  let paymentFailureDetail = "PAYMENT_FAILED";
+  const hasAgentApiCredentials = Boolean(process.env.NEAR_INTENTS_AGENT_API_KEY?.trim());
+  const hasAutonomousWorker = Boolean(
+    process.env.NEAR_AUTONOMOUS_ACCOUNT_ID?.trim() &&
+    process.env.NEAR_AUTONOMOUS_PRIVATE_KEY?.trim()
+  );
 
   try {
-    if (agentId && grantToken) {
+    // Prefer the configured self-hosted worker. This prevents stale/demo Agent
+    // rows or a newly available Agent API key from diverting production payouts.
+    if (hasAutonomousWorker) {
+      const direct = await directUsdtTransfer({
+        recipient: vendor.wallet_address,
+        amount: rawUnits,
+        invoiceId: invoice.id,
+      });
+      txRef = direct.transactionHash;
+      agentOpRef = `near-direct:${direct.transactionHash}`;
+      callSucceeded = true;
+      callSubmitted = true;
+    } else if (hasAgentApiCredentials && agentId && grantToken) {
       const withdrawRes = await withdraw(
         agentId,
         {
@@ -254,21 +289,12 @@ export async function processInvoice(
         callSucceeded = Boolean(txRef && ["success", "succeeded", "settled", "completed"].includes(providerStatus));
         callSubmitted = Boolean(agentOpRef || txRef);
       }
-    } else if (process.env.NEAR_AUTONOMOUS_ACCOUNT_ID && process.env.NEAR_AUTONOMOUS_PRIVATE_KEY) {
-      const direct = await directUsdtTransfer({
-        recipient: vendor.wallet_address,
-        amount: rawUnits,
-        invoiceId: invoice.id,
-      });
-      txRef = direct.transactionHash;
-      agentOpRef = `near-direct:${direct.transactionHash}`;
-      callSucceeded = true;
-      callSubmitted = true;
     } else {
       throw new Error("Neither Agent API credentials nor autonomous worker credentials are configured");
     }
   } catch (apiErr: any) {
-    console.warn("[processInvoice] Agent withdraw API execution:", apiErr?.message);
+    paymentFailureDetail = `PAYMENT_FAILED: ${describePaymentError(apiErr).slice(0, 240)}`;
+    console.warn("[processInvoice] Agent withdraw API execution:", paymentFailureDetail);
   }
 
   if (callSubmitted && !callSucceeded) {
@@ -310,7 +336,7 @@ export async function processInvoice(
     await recordInvoiceEvent({ invoiceId: invoice.id, type: "payment.settled", status: "settled", payload: { operation_id: agentOpRef, tx_ref: txRef } });
 
     await admin.from("audit_log").insert({
-      actor: process.env.NEAR_AUTONOMOUS_ACCOUNT_ID && !agentId ? "autonomous-worker" : "agent",
+      actor: process.env.NEAR_AUTONOMOUS_ACCOUNT_ID && !hasAgentApiCredentials ? "autonomous-worker" : "agent",
       action: "SETTLE_PAYMENT",
       invoice_id: invoice.id,
       decision: "settled",
@@ -335,6 +361,13 @@ export async function processInvoice(
       .from("invoices")
       .update({ status: "failed", refusal_reason: "PAYMENT_FAILED" })
       .eq("id", invoice.id);
+    await admin.from("audit_log").insert({
+      actor: process.env.NEAR_AUTONOMOUS_ACCOUNT_ID && !hasAgentApiCredentials ? "autonomous-worker" : "agent",
+      action: "SETTLE_PAYMENT",
+      invoice_id: invoice.id,
+      decision: "refuse",
+      reason: paymentFailureDetail,
+    });
     await recordInvoiceEvent({ invoiceId: invoice.id, type: "payment.failed", status: "failed", payload: { reason: "PAYMENT_FAILED" } });
 
     return {

@@ -30,7 +30,8 @@ export default function ContractorHomePage() {
   const [recentInvoices, setRecentInvoices] = useState<ContractorInvoice[]>([]);
 
   useEffect(() => {
-    fetch("/api/invoices")
+    const vendorId = window.sessionStorage.getItem("nearbligo_vendor_id");
+    fetch(vendorId ? `/api/invoices?vendor_id=${encodeURIComponent(vendorId)}` : "/api/invoices")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.vendor_name) setVendorName(data.vendor_name);

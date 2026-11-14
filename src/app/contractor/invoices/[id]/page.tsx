@@ -290,17 +290,21 @@ export default function InvoiceStatusPage() {
                 <CheckCircle2 className="w-4 h-4" />
               ) : isNeedsApproval ? (
                 <Clock className="w-4 h-4 animate-pulse" />
+              ) : isRefused ? (
+                <XCircle className="w-4 h-4" />
               ) : (
                 <Clock className="w-4 h-4" />
               )}
             </div>
             <div>
               <div className="text-xs font-bold text-[#E8EEF7]">
-                3. {isNeedsApproval ? "Awaiting Payer Review" : "Approved"}
+                3. {isNeedsApproval ? "Awaiting Payer Review" : isRefused ? "Not approved" : "Approved"}
               </div>
               <div className="text-[11px] text-[#93A4BD]">
                 {isNeedsApproval
                   ? "Requires payer confirmation to disburse."
+                  : isRefused
+                  ? `Authorization stopped: ${invoice.refusal_reason || "rules check failed"}.`
                   : "Invoice authorization is active."}
               </div>
             </div>
@@ -322,10 +326,12 @@ export default function InvoiceStatusPage() {
               )}
             </div>
             <div>
-              <div className="text-xs font-bold text-[#E8EEF7]">4. Paid to Account</div>
+              <div className="text-xs font-bold text-[#E8EEF7]">4. {isRefused ? "Not paid" : "Paid to Account"}</div>
               <div className="text-[11px] text-[#93A4BD]">
                 {isStep4Complete
                   ? `Transferred directly to ${invoice.wallet_address}.`
+                  : isRefused
+                  ? "No funds were sent. Correct the payout account and submit a new invoice."
                   : `Will be sent to ${invoice.wallet_address}.`}
               </div>
             </div>
