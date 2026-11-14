@@ -1,0 +1,4 @@
+near_global_contracts::universal_state_init::RawStateInit
+near_global_contracts::universal_state_init::UniversalStateInit
+near_global_contracts::universal_state_init::UniversalStateInitV1
+near_sdk::serde_json::Map<std::string::String, near_sdk::serde_json::Value>

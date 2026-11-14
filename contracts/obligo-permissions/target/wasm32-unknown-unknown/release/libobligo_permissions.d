@@ -1,0 +1,1 @@
+/home/techpal/Desktop/NEAR-Obligo/contracts/obligo-permissions/target/wasm32-unknown-unknown/release/libobligo_permissions.rlib: /home/techpal/Desktop/NEAR-Obligo/contracts/obligo-permissions/src/lib.rs /home/techpal/Desktop/NEAR-Obligo/contracts/obligo-permissions/target/near/obligo_permissions_abi.zst

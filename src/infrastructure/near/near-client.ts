@@ -14,9 +14,34 @@ export interface CreatePermissionParams {
 }
 
 export class NearAuthorisationClient {
-  public static contractId = process.env.NEAR_CONTRACT_ID || "obligo-permissions.testnet";
-  public static networkId = process.env.NEAR_NETWORK_ID || "testnet";
-  public static nodeUrl = process.env.NEAR_NODE_URL || "https://rpc.testnet.near.org";
+  public static contractId = process.env.NEAR_CONTRACT_ID || "obligoo.near";
+  public static networkId = process.env.NEAR_NETWORK_ID || "mainnet";
+  public static nodeUrl = process.env.NEAR_NODE_URL || "https://rpc.mainnet.near.org";
+
+  public static async getOnchainPermission(permissionId: string) {
+    const argsBase64 = Buffer.from(JSON.stringify({ permission_id: permissionId })).toString("base64");
+    const response = await fetch(this.nodeUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: `permission-${permissionId}`,
+        method: "query",
+        params: {
+          request_type: "call_function",
+          finality: "final",
+          account_id: this.contractId,
+          method_name: "get_permission",
+          args_base64: argsBase64,
+        },
+      }),
+    });
+    const json = await response.json();
+    if (!response.ok || json.error) {
+      throw new Error(json.error?.message || "NEAR permission query failed");
+    }
+    return JSON.parse(Buffer.from(json.result.result).toString("utf8"));
+  }
 
   /**
    * Generates a deterministic SHA-256 permission hash from off-chain parameters
@@ -34,8 +59,8 @@ export class NearAuthorisationClient {
 
   /**
    * Records an on-chain verifiable permission.
-   * If NEAR_ACCOUNT_ID and NEAR_PRIVATE_KEY are set, broadcasts a real transaction to NEAR Testnet RPC.
-   * Otherwise, records a deterministic verifiable testnet transaction hash.
+   * A missing key or failed broadcast is an error: we must never represent an
+   * off-chain placeholder as an on-chain authorization.
    */
   public static async recordPermission(params: CreatePermissionParams): Promise<AuthorisationRecord> {
     const userId = params.userId || store.getDefaultUserId();
@@ -69,7 +94,7 @@ export class NearAuthorisationClient {
 
         const account = await nearConnection.account(accountId);
         
-        // Execute function call on NEAR testnet contract
+        // Execute function call on the configured NEAR network and contract.
         const outcome = await account.functionCall({
           contractId: this.contractId,
           methodName: "create_permission",
@@ -84,13 +109,16 @@ export class NearAuthorisationClient {
         });
 
         txHash = outcome.transaction.hash;
-        console.log(`[NEAR Testnet] Permission broadcasted on-chain. Tx: ${txHash}`);
+        console.log(`[NEAR ${this.networkId}] Permission broadcasted on-chain. Tx: ${txHash}`);
       } catch (err) {
-        console.warn("[NEAR Testnet] Live broadcast failed or contract not deployed yet, falling back to verifiable record:", err);
-        txHash = "near_tx_" + crypto.randomBytes(16).toString("hex") + "_testnet";
+        throw new Error(
+          `NEAR permission transaction failed: ${err instanceof Error ? err.message : String(err)}`
+        );
       }
     } else {
-      txHash = "near_tx_" + crypto.randomBytes(16).toString("hex") + "_testnet";
+      throw new Error(
+        "NEAR_ACCOUNT_ID and NEAR_PRIVATE_KEY are required to create an on-chain permission"
+      );
     }
 
     const record = store.addAuthorisationRecord({

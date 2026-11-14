@@ -1,0 +1,205 @@
+{
+  "schema_version": "0.4.0",
+  "metadata": {
+    "name": "obligo-permissions",
+    "version": "0.1.0",
+    "authors": [
+      "Obligo Team <team@obligo.ai>"
+    ],
+    "build": {
+      "compiler": "rustc 1.100.0",
+      "builder": "cargo-near cargo-near-build 0.11.5"
+    },
+    "wasm_hash": "9MtT4HCh9hD2iLRkidhwVcy9M7n2cieMQrq1JKHvHyh3"
+  },
+  "body": {
+    "functions": [
+      {
+        "name": "contract_source_metadata",
+        "kind": "view"
+      },
+      {
+        "name": "create_permission",
+        "doc": " Record a cryptographic permission hash with an explicit spending limit and expiration",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "permission_hash",
+              "type_schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "action_type",
+              "type_schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "spending_limit",
+              "type_schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "currency",
+              "type_schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "expiry",
+              "type_schema": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "type": "string"
+          }
+        }
+      },
+      {
+        "name": "get_permission",
+        "doc": " Retrieve permission details by ID",
+        "kind": "view",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "permission_id",
+              "type_schema": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/OnChainAuthorisation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "new",
+        "kind": "call",
+        "modifiers": [
+          "init"
+        ]
+      },
+      {
+        "name": "revoke_permission",
+        "doc": " Revoke an existing permission. Only the original creator can revoke it.",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "permission_id",
+              "type_schema": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "type": "boolean"
+          }
+        }
+      },
+      {
+        "name": "verify_permission",
+        "doc": " Verify if a permission hash is valid, unrevoked, and unexpired",
+        "kind": "view",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "permission_id",
+              "type_schema": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "type": "boolean"
+          }
+        }
+      }
+    ],
+    "root_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "String",
+      "type": "string",
+      "definitions": {
+        "OnChainAuthorisation": {
+          "type": "object",
+          "required": [
+            "action_type",
+            "created_at",
+            "currency",
+            "expiry",
+            "id",
+            "permission_hash",
+            "revoked",
+            "spending_limit",
+            "user_account"
+          ],
+          "properties": {
+            "action_type": {
+              "type": "string"
+            },
+            "created_at": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "currency": {
+              "type": "string"
+            },
+            "expiry": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "id": {
+              "type": "string"
+            },
+            "permission_hash": {
+              "type": "string"
+            },
+            "revoked": {
+              "type": "boolean"
+            },
+            "spending_limit": {
+              "type": "string"
+            },
+            "user_account": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

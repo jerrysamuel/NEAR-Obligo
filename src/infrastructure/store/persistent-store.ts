@@ -299,7 +299,7 @@ const SEED_DATA: StoreData = {
       currency: "NGN",
       expiry: Math.floor(Date.now() / 1000) + 86400 * 3,
       transactionHash: "7bY8b6W3pQ1vR8mC6xZ7T4nL9kM2sP5wJ8qH4vK3dF9x",
-      contractId: "obligo-permissions.testnet",
+      contractId: "obligoo.near",
       revoked: false,
       createdAt: new Date().toISOString(),
     },

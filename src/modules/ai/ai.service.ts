@@ -1,7 +1,5 @@
 import OpenAI from "openai";
 import { Subscription, ShoppingPreference } from "@/infrastructure/store/persistent-store";
-import { ShoppingIntentExtraction } from "@/modules/shopping/shopping.types";
-import { ShoppingService } from "@/modules/shopping/shopping.service";
 import { SubscriptionService } from "@/modules/subscriptions/subscription.service";
 import { formatCurrency, calculateMonthlyEquivalent, BillingCycle } from "@/lib/format";
 import { AIResponse, AIService } from "./ai.types";
@@ -21,10 +19,6 @@ export class OrchestratedAIService implements AIService {
         baseURL,
       });
     }
-  }
-
-  public async interpretShoppingRequest(input: string): Promise<ShoppingIntentExtraction> {
-    return ShoppingService.extractShoppingRequirements(input);
   }
 
   public async answerSubscriptionQuestion(

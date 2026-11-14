@@ -1,0 +1,6 @@
+near_global_contracts::universal_state_init::RawStateInit
+near_global_contracts::universal_state_init::UniversalStateInit
+near_global_contracts::universal_state_init::UniversalStateInitV1
+near_sdk::borsh::schema::ip_addr_std_derive_impl::IpAddr
+near_sdk::borsh::schema::ip_addr_std_derive_impl::Ipv4Addr
+near_sdk::borsh::schema::ip_addr_std_derive_impl::Ipv6Addr

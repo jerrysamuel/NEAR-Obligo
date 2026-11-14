@@ -1,0 +1,11 @@
+/home/techpal/Desktop/NEAR-Obligo/contracts/obligo-permissions/target/cargo-near-abi/debug/build/ripemd/3db4c6f25dae53af/out/ripemd-3db4c6f25dae53af.d: /home/techpal/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ripemd-0.1.3/src/lib.rs /home/techpal/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ripemd-0.1.3/src/c128.rs /home/techpal/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ripemd-0.1.3/src/c160.rs /home/techpal/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ripemd-0.1.3/src/c256.rs /home/techpal/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ripemd-0.1.3/src/c320.rs
+
+/home/techpal/Desktop/NEAR-Obligo/contracts/obligo-permissions/target/cargo-near-abi/debug/build/ripemd/3db4c6f25dae53af/out/libripemd-3db4c6f25dae53af.rlib: /home/techpal/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ripemd-0.1.3/src/lib.rs /home/techpal/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ripemd-0.1.3/src/c128.rs /home/techpal/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ripemd-0.1.3/src/c160.rs /home/techpal/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ripemd-0.1.3/src/c256.rs /home/techpal/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ripemd-0.1.3/src/c320.rs
+
+/home/techpal/Desktop/NEAR-Obligo/contracts/obligo-permissions/target/cargo-near-abi/debug/build/ripemd/3db4c6f25dae53af/out/libripemd-3db4c6f25dae53af.rmeta: /home/techpal/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ripemd-0.1.3/src/lib.rs /home/techpal/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ripemd-0.1.3/src/c128.rs /home/techpal/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ripemd-0.1.3/src/c160.rs /home/techpal/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ripemd-0.1.3/src/c256.rs /home/techpal/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ripemd-0.1.3/src/c320.rs
+
+/home/techpal/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ripemd-0.1.3/src/lib.rs:
+/home/techpal/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ripemd-0.1.3/src/c128.rs:
+/home/techpal/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ripemd-0.1.3/src/c160.rs:
+/home/techpal/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ripemd-0.1.3/src/c256.rs:
+/home/techpal/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ripemd-0.1.3/src/c320.rs:

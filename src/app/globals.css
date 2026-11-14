@@ -3,29 +3,108 @@
 @tailwind utilities;
 
 :root {
-  --background: #090d16;
-  --foreground: #f1f5f9;
+  --bg-canvas: #F6F5F1;
+  --bg-surface: #FFFFFF;
+  --bg-subtle: #ECEAE2;
+  --text-primary: #141514;
+  --text-secondary: #52544F;
+  --text-muted: #868881;
+  --border-hairline: #DCD9D0;
+  --border-strong: #141514;
+  --accent-primary: #0F3D2E;
+  --accent-primary-fg: #F6F5F1;
+  --status-settled: #15803D;
+  --status-policy-hold: #B45309;
+  --status-breach: #B91C1C;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+}
+
+.dark {
+  --bg-canvas: #0D0E0D;
+  --bg-surface: #141614;
+  --bg-subtle: #1D201D;
+  --text-primary: #F2F1EC;
+  --text-secondary: #9E9F99;
+  --text-muted: #666862;
+  --border-hairline: #262926;
+  --border-strong: #4A4E4A;
+  --accent-primary: #34D399;
+  --accent-primary-fg: #091510;
+  --status-settled: #34D399;
+  --status-policy-hold: #FBBF24;
+  --status-breach: #F87171;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  font-family: var(--font-inter), "Plus Jakarta Sans", system-ui, sans-serif;
   min-height: 100vh;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Custom scrollbar */
+*, ::before, ::after { border-color: var(--border-hairline); }
+
+.ledger-page { background: var(--bg-canvas); color: var(--text-primary); min-height: 100%; }
+.ledger-panel { background: var(--bg-surface); border: 1px solid var(--border-hairline); border-radius: var(--radius-md); }
+.ledger-subtle { background: var(--bg-subtle); }
+.ledger-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: var(--bg-surface); border: 1px solid var(--border-hairline); border-radius: var(--radius-md); }
+.ledger-strip > * { padding: 1rem 1.25rem; border-right: 1px solid var(--border-hairline); }
+.ledger-strip > *:last-child { border-right: 0; }
+.ledger-button { background: var(--accent-primary); color: var(--accent-primary-fg); border: 1px solid var(--accent-primary); border-radius: var(--radius-sm); }
+.ledger-button:hover { opacity: .88; }
+.mono { font-family: "JetBrains Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace; font-variant-numeric: tabular-nums; }
+.serif-title { font-family: "Newsreader", "Instrument Serif", Georgia, serif; }
+.ledger-table { width: 100%; border-collapse: collapse; }
+.ledger-table th, .ledger-table td { border-bottom: 1px solid var(--border-hairline); padding: .75rem 1rem; text-align: left; }
+.ledger-table th { color: var(--text-muted); font-size: .68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.receipt-divider { border-top: 1px dotted var(--border-hairline); }
+.status-settled { color: var(--status-settled); }
+.status-policy-hold { color: var(--status-policy-hold); }
+.status-breach { color: var(--status-breach); }
+
+@media (max-width: 640px) {
+  .ledger-strip { grid-template-columns: 1fr; }
+  .ledger-strip > * { border-right: 0; border-bottom: 1px solid var(--border-hairline); }
+  .ledger-strip > *:last-child { border-bottom: 0; }
+}
+
+/* Reduced motion support (Section 5) */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 100ms !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
+
+/* Page transitions & animations */
+.page-enter {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 180ms ease-out, transform 180ms ease-out;
+}
+
+/* Custom scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 3px;
+  background: rgba(147, 164, 189, 0.3);
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: var(--text-muted);
 }

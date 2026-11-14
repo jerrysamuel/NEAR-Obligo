@@ -13,24 +13,7 @@ export async function POST(request: Request) {
 
     const subscriptions = store.getSubscriptions();
     const profile = store.getProfile();
-    const preferences = store.getPreferences();
-
     const lower = message.toLowerCase();
-
-    // Check if it's a cross-module budget & shopping inquiry
-    if (
-      (lower.includes("budget") || lower.includes("afford") || lower.includes("laptop")) &&
-      (lower.includes("subscription") || lower.includes("spend") || lower.includes("cloud"))
-    ) {
-      const response = await aiService.generateCrossModuleInsights(message, {
-        subscriptions,
-        budget: profile.monthlyBudget,
-        preferences,
-      });
-
-      store.logActivity(profile.id, "agent", "CROSS_MODULE_AI_QUERY", { message });
-      return NextResponse.json({ success: true, response });
-    }
 
     // Subscription questions
     if (
@@ -45,18 +28,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, response });
     }
 
-    // Shopping questions
-    const extracted = await aiService.interpretShoppingRequest(message);
     const response = {
-      content: `I've analyzed your shopping requirement:\n• Target category: ${extracted.productType}\n• Recommended Specs: ${JSON.stringify(extracted.targetSpecs)}\n• Budget Cap: ₦${extracted.maxBudget?.toLocaleString() || "Not specified"}\n• Primary Use Case: ${extracted.useCase}\n\nMatching products from verified merchants are ready for your review below.`,
+      content: "I can help explain invoice payment policies, approval decisions, contractor obligations, and settlement activity. Ask about an invoice, a payment limit, or an approval rule.",
       isPrivateInference: true,
       attestationVerified: true,
       model: "near-intent-extractor",
       provider: "deterministic-fallback" as const,
-      extracted,
     };
 
-    store.logActivity(profile.id, "agent", "SHOPPING_AI_QUERY", { message, extracted });
+    store.logActivity(profile.id, "agent", "INVOICE_AI_QUERY", { message });
     return NextResponse.json({ success: true, response });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

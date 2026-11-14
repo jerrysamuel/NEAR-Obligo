@@ -1,0 +1,1 @@
+near_sdk::serde_json::Map<std::string::String, near_sdk::serde_json::Value>

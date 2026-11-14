@@ -88,7 +88,7 @@ export default function PermissionsPage() {
             <span>Permissions & NEAR Verifiable Authorisations</span>
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Audit external recipient disclosures, cryptographic permission hashes, and NEAR testnet contract records.
+            Audit external recipient disclosures, cryptographic permission hashes, and NEAR mainnet contract records.
           </p>
         </div>
 
@@ -109,7 +109,7 @@ export default function PermissionsPage() {
             <h2 className="text-base font-bold text-white">NEAR Testnet Verifiable Records</h2>
           </div>
           <span className="text-xs font-mono text-cyan-400 bg-cyan-950/40 px-2.5 py-1 rounded-full border border-cyan-500/30">
-            Contract: obligo-permissions.testnet
+            Contract: obligoo.near
           </span>
         </div>
 
@@ -155,7 +155,7 @@ export default function PermissionsPage() {
                   <div className="flex items-center space-x-2 shrink-0">
                     {auth.transactionHash && (
                       <a
-                        href={`https://testnet.nearblocks.io/txns/${auth.transactionHash}`}
+                        href={`https://nearblocks.io/txns/${auth.transactionHash}`}
                         target="_blank"
                         rel="noreferrer"
                         className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-mono transition flex items-center gap-1"

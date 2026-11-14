@@ -8,11 +8,15 @@
     "start": "next start",
     "lint": "next lint",
     "test:mvp": "tsx scripts/verify-mvp.ts",
+    "test:mainnet-contract": "tsx scripts/verify-mainnet-contract.ts",
     "generate:near-keys": "tsx scripts/generate-near-keys.ts",
+    "generate:worker-key": "tsx scripts/generate-autonomous-worker-key.ts",
+    "check:worker-key": "tsx scripts/check-autonomous-worker.ts",
     "mcp": "tsx src/infrastructure/mcp/cli.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
+    "@near-intents-agent-api/sdk": "^0.9.1",
     "@supabase/ssr": "^0.5.1",
     "@supabase/supabase-js": "^2.45.6",
     "clsx": "^2.1.1",

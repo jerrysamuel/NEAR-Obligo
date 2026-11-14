@@ -1,31 +1,31 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
-use near_sdk::{env, near_bindgen, require, AccountId, PanicOnDefault};
+use schemars::JsonSchema;
+use near_sdk::{env, near, require};
 use std::collections::HashMap;
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[derive(BorshDeserialize, BorshSerialize, borsh::BorshSchema, Serialize, Deserialize, JsonSchema, Clone)]
 #[serde(crate = "near_sdk::serde")]
 pub struct OnChainAuthorisation {
     pub id: String,
-    pub user_account: AccountId,
+    pub user_account: String,
     pub permission_hash: String,
     pub action_type: String,
-    pub spending_limit: U128,
+    pub spending_limit: String,
     pub currency: String,
     pub expiry: u64,
     pub revoked: bool,
     pub created_at: u64,
 }
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
+#[near(contract_state)]
+#[derive(Default)]
 pub struct ObligoPermissionsContract {
     pub permissions: HashMap<String, OnChainAuthorisation>,
     pub permission_count: u64,
 }
 
-#[near_bindgen]
+#[near]
 impl ObligoPermissionsContract {
     #[init]
     pub fn new() -> Self {
@@ -41,7 +41,7 @@ impl ObligoPermissionsContract {
         &mut self,
         permission_hash: String,
         action_type: String,
-        spending_limit: U128,
+        spending_limit: String,
         currency: String,
         expiry: u64,
     ) -> String {
@@ -51,7 +51,7 @@ impl ObligoPermissionsContract {
 
         let record = OnChainAuthorisation {
             id: permission_id.clone(),
-            user_account: caller,
+            user_account: caller.to_string(),
             permission_hash,
             action_type,
             spending_limit,
@@ -92,7 +92,9 @@ impl ObligoPermissionsContract {
     /// Verify if a permission hash is valid, unrevoked, and unexpired
     pub fn verify_permission(&self, permission_id: String) -> bool {
         if let Some(perm) = self.permissions.get(&permission_id) {
-            let now = env::block_timestamp();
+            // The application stores expiry as Unix seconds. NEAR's block
+            // timestamp is nanoseconds, so normalize it before comparing.
+            let now = env::block_timestamp() / 1_000_000_000;
             !perm.revoked && perm.expiry > now
         } else {
             false
