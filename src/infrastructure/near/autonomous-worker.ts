@@ -3,6 +3,7 @@ import * as nearAPI from "near-api-js";
 const { connect, keyStores, KeyPair } = nearAPI;
 
 const USDT_CONTRACT = process.env.NEAR_USDT_CONTRACT || "usdt.tether-token.near";
+const PAYMENT_ROUTER = process.env.NEAR_PAYMENT_ROUTER_ACCOUNT_ID;
 const NETWORK_ID = process.env.NEAR_NETWORK_ID || "mainnet";
 const NODE_URL = process.env.NEAR_NODE_URL || "https://rpc.mainnet.near.org";
 
@@ -28,6 +29,7 @@ export async function directUsdtTransfer(input: {
   if (!accountId || !privateKey || !privateKey.startsWith("ed25519:")) {
     throw new Error("Autonomous worker credentials are not configured");
   }
+  const routerId = PAYMENT_ROUTER || accountId;
 
   const keyStore = new keyStores.InMemoryKeyStore();
   const keyPair = KeyPair.fromString(privateKey as any);
@@ -45,26 +47,45 @@ export async function directUsdtTransfer(input: {
   if (!permission?.FunctionCall) {
     throw new Error("Autonomous worker key must be a restricted FunctionCall key");
   }
-  if (permission.FunctionCall.receiver_id !== USDT_CONTRACT) {
-    throw new Error(`Worker key must target ${USDT_CONTRACT}`);
+  if (permission.FunctionCall.receiver_id !== routerId) {
+    throw new Error(`Worker key must target payment router ${routerId}`);
   }
   const methods = permission.FunctionCall.method_names || [];
-  if (methods.length !== 1 || methods[0] !== "ft_transfer") {
-    throw new Error("Worker key must allow only the ft_transfer method");
+  if (methods.length !== 1 || methods[0] !== "pay") {
+    throw new Error("Worker key must allow only the payment router pay method");
   }
 
   const account = await connection.account(accountId);
-  const outcome: any = await account.functionCall({
-    contractId: USDT_CONTRACT,
-    methodName: "ft_transfer",
-    args: {
-      receiver_id: input.recipient,
-      amount: input.amount,
-      memo: `Obligo invoice ${input.invoiceId}`,
-    },
-    gas: BigInt("10000000000000"),
-    attachedDeposit: BigInt("1"),
+  const outcome: any = await (account as any).signAndSendTransaction({
+    receiverId: routerId,
+    actions: [
+      nearAPI.transactions.functionCall(
+        "pay",
+        {
+          receiver_id: input.recipient,
+          amount: input.amount,
+          memo: `Obligo invoice ${input.invoiceId}`,
+        },
+        // The router performs the token transfer and attaches 1 yoctoNEAR
+        // internally, so the restricted worker key attaches no deposit.
+        // The router needs its own execution gas in addition to the
+        // 30-Tgas cross-contract USDT transfer.
+        BigInt("60000000000000"),
+        BigInt("0")
+      ),
+    ],
+    // Return the final outcome so we can expose the actual contract failure
+    // instead of near-api-js reducing it to an empty "{}" error.
+    returnError: true,
   });
+
+  if (outcome?.status?.Failure) {
+    throw new Error(`NEAR ft_transfer failed: ${JSON.stringify(outcome.status.Failure)}`);
+  }
+
+  if (!outcome?.transaction?.hash) {
+    throw new Error("NEAR ft_transfer returned no transaction hash");
+  }
 
   return {
     transactionHash: outcome.transaction.hash,

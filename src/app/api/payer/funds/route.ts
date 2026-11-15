@@ -3,6 +3,33 @@ import { getServiceSupabase } from "@/infrastructure/supabase/client";
 
 export const dynamic = "force-dynamic";
 
+async function getUsdtBalanceCents(accountId: string): Promise<number> {
+  const contractId = process.env.NEAR_USDT_CONTRACT || "usdt.tether-token.near";
+  const nodeUrl = process.env.NEAR_NODE_URL || "https://rpc.mainnet.near.org";
+  const argsBase64 = Buffer.from(JSON.stringify({ account_id: accountId })).toString("base64");
+  const response = await fetch(nodeUrl, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    cache: "no-store",
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: `usdt-balance-${accountId}`,
+      method: "query",
+      params: {
+        request_type: "call_function",
+        finality: "final",
+        account_id: contractId,
+        method_name: "ft_balance_of",
+        args_base64: argsBase64,
+      },
+    }),
+  });
+  const json = await response.json();
+  if (!response.ok || json.error || !json.result?.result) return 0;
+  const rawUnits = BigInt(JSON.parse(Buffer.from(json.result.result).toString("utf8")) || "0");
+  return Number(rawUnits / 10000n);
+}
+
 export async function GET() {
   try {
     const admin = getServiceSupabase();
@@ -45,6 +72,11 @@ export async function GET() {
 
     const pendingCount = (pendingInvoices || 0) + (pendingVendors || 0);
 
+    const settlementAccount = process.env.NEAR_AUTONOMOUS_ACCOUNT_ID || "oblig.near";
+    const monthStart = new Date();
+    monthStart.setUTCDate(1);
+    monthStart.setUTCHours(0, 0, 0, 0);
+
     // Read recent settled activity
     const { data: settledInvoices } = await admin
       .from("invoices")
@@ -52,6 +84,18 @@ export async function GET() {
       .eq("status", "settled")
       .order("created_at", { ascending: false })
       .limit(5);
+
+    const { data: monthlySettledInvoices } = await admin
+      .from("invoices")
+      .select("amount")
+      .eq("status", "settled")
+      .gte("created_at", monthStart.toISOString());
+    const paidThisMonth = (monthlySettledInvoices || [])
+      .reduce((sum: number, invoice: any) => sum + Number(invoice.amount || 0), 0);
+    const availableFunds = await getUsdtBalanceCents(settlementAccount).catch((error) => {
+      console.warn("[/api/payer/funds] Could not read USDT balance:", error instanceof Error ? error.message : error);
+      return 0;
+    });
 
     const recentActivity = (settledInvoices || []).map((inv: any) => ({
       id: inv.id,
@@ -61,8 +105,8 @@ export async function GET() {
 
     return NextResponse.json({
       company: "Your organization",
-      available_funds_cents: 0,
-      paid_this_month_cents: 0,
+      available_funds_cents: availableFunds,
+      paid_this_month_cents: paidThisMonth,
       monthly_limit_cents: policy?.monthly_limit ? Number(policy.monthly_limit) : 500,
       pending_approvals_count: pendingCount,
       soft_paused: agent?.soft_paused ?? false,

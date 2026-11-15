@@ -23,10 +23,21 @@ export default function PayerHomePage() {
   });
 
   useEffect(() => {
-    fetch("/api/payer/funds")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((json) => json && setData((previous) => ({ ...previous, ...json })))
-      .catch(() => {});
+    let active = true;
+    const loadFunds = () => {
+      fetch("/api/payer/funds", { cache: "no-store" })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((json) => {
+          if (active && json) setData((previous) => ({ ...previous, ...json }));
+        })
+        .catch(() => {});
+    };
+    loadFunds();
+    const refreshTimer = window.setInterval(loadFunds, 10000);
+    return () => {
+      active = false;
+      window.clearInterval(refreshTimer);
+    };
   }, []);
 
   const progress = data.monthly_limit_cents > 0

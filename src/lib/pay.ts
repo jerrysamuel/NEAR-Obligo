@@ -15,14 +15,46 @@ export interface ProcessInvoiceResult {
 }
 
 function describePaymentError(error: unknown): string {
-  if (error instanceof Error && error.message) return error.message;
+  if (error instanceof Error && error.message && error.message !== "{}") return error.message;
   if (typeof error === "string") {
     const trimmed = error.trim();
     return trimmed && trimmed !== "{}" ? trimmed : "Unknown NEAR execution error";
   }
   const candidate = error as any;
-  if (candidate?.message) return String(candidate.message);
-  if (candidate?.cause?.message) return String(candidate.cause.message);
+  if (candidate?.message && String(candidate.message) !== "{}") return String(candidate.message);
+  if (candidate?.error_message) return String(candidate.error_message);
+  if (candidate?.cause?.message && String(candidate.cause.message) !== "{}") return String(candidate.cause.message);
+  if (candidate?.type) {
+    const details = candidate.error_type || candidate.kind || candidate.context?.error_message;
+    if (details) return `${candidate.type}: ${details}`;
+  }
+  const outcome = candidate?.transaction_outcome?.outcome || candidate?.transaction_outcome;
+  if (outcome?.status?.Failure) {
+    const failure = outcome.status.Failure;
+    return `NEAR transaction failed: ${JSON.stringify(failure)}`;
+  }
+  if (candidate?.transaction_outcome) {
+    return `NEAR transaction failed: ${JSON.stringify(candidate.transaction_outcome)}`;
+  }
+  if (typeof candidate?.toString === "function") {
+    const rendered = String(candidate.toString());
+    if (rendered && rendered !== "[object Object]" && rendered !== "{}" && rendered !== "Error: {}") return rendered;
+  }
+  if (error instanceof Error) {
+    const ownFields = Object.getOwnPropertyNames(error).reduce<Record<string, unknown>>((result, key) => {
+      const value = (error as any)[key];
+      if (
+        key !== "stack" &&
+        value !== undefined &&
+        !(key === "message" && String(value) === "{}")
+      ) result[key] = value;
+      return result;
+    }, {});
+    if (Object.keys(ownFields).length > 0) {
+      return `NEAR SDK error: ${JSON.stringify(ownFields)}`;
+    }
+    if (error.stack) return `NEAR SDK error: ${error.stack.split("\n").slice(0, 3).join(" | ")}`;
+  }
   try {
     const serialized = JSON.stringify(error);
     return serialized && serialized !== "{}" ? serialized : "Unknown NEAR execution error";
@@ -294,7 +326,10 @@ export async function processInvoice(
     }
   } catch (apiErr: any) {
     paymentFailureDetail = `PAYMENT_FAILED: ${describePaymentError(apiErr).slice(0, 240)}`;
-    console.warn("[processInvoice] Agent withdraw API execution:", paymentFailureDetail);
+    console.error(
+      `[processInvoice] ${hasAutonomousWorker ? "NEAR worker transfer" : "Agent API withdraw"} failed:`,
+      paymentFailureDetail,
+    );
   }
 
   if (callSubmitted && !callSucceeded) {
